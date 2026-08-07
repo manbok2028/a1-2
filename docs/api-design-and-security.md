@@ -33,3 +33,39 @@ GET은 이미 있는 정보를 조건으로 조회할 때 URL 쿼리와 함께 �
 ## 결과 캐싱 정책
 
 같은 날짜의 원본 JSON과 Markdown 리포트가 모두 있으면 API 호출을 생략합니다. 이 방식은 비용·시간을 줄이는 간단한 캐싱입니다. 날씨·행사 후보를 새로 받고 싶을 때는 `--refresh`를 사용합니다. 캐시 파일이 손상되었거나 둘 중 하나가 없으면 정상 API 흐름을 다시 실행합니다.
+
+## 요청 예시와 플러그형 클라이언트
+
+민감한 실제 키는 아래 예시에 넣지 않습니다.
+
+```text
+GET https://dapi.kakao.com/v2/local/search/keyword.json?query=강릉+맛집&size=5
+Authorization: KakaoAK ${KAKAO_REST_API_KEY}
+```
+
+```json
+POST /v1/chat/completions
+{
+  "model": "${OPENAI_MODEL}",
+  "messages": [{"role": "user", "content": "날짜와 JSON 스키마를 포함한 추천 프롬프트"}],
+  "response_format": {"type": "json_object"}
+}
+```
+
+`TravelPlanner`는 LLM과 장소 검색 클라이언트를 생성자에서 주입받습니다. 기본 실행은 `OpenAIClient`와 `KakaoLocalClient`를 사용하고, `--demo`는 같은 인터페이스의 `DemoLlmClient`와 `DemoPlaceClient`를 교체합니다. OpenAI 호환 서버를 사용하려면 `OPENAI_BASE_URL`과 `OPENAI_MODEL`만 환경변수로 바꾸면 됩니다.
+
+## 사용자 지역 입력 보정
+
+`--cities`는 자유 입력을 받되, LLM에게 위치를 추측시키지 않습니다. `input_processing.py`의 명시적 별칭표로 `강눙 → 강릉`, `제주도 → 제주`, `속초시 → 속초`를 보정하고, 한 문장 안의 여러 지역을 순서대로 추출합니다. 지역 외 단어는 Kakao 검색 쿼리에 전달하지 않습니다. 인식한 지역은 1차 추천 프롬프트의 우선 후보이면서 도시별 맛집 검색 대상이 됩니다.
+
+## 재시도·오류 로그의 계약
+
+스키마 파싱 첫 실패 뒤의 보정 프롬프트는 날짜·사용자 요청 지역을 유지하고, `JSON 객체만 반환`하도록 요구를 짧게 강화합니다. 두 번째 실패는 종료합니다. 장소 API는 자동 재시도하지 않습니다. 동일 요청을 반복해 쿼터를 소모하거나 중복 결과를 만들지 않기 위해서이며, 실패한 도시는 빈 목록과 오류 레코드로 남긴 뒤 리포트는 계속 만듭니다.
+
+오류 레코드 스키마는 **v1**이며 모든 결과 JSON에서 아래 최소 필드를 사용합니다.
+
+```json
+{"step": "place_search", "type": "AUTH_ERROR", "message": "HTTP 401"}
+```
+
+운영 환경에서는 `.env` 대신 배포 플랫폼의 Secret/환경변수 관리 기능에 `OPENAI_API_KEY`, `KAKAO_REST_API_KEY`를 등록합니다. CI에는 실제 키·실제 API 결과를 넣지 않고 `--demo`와 단위 테스트만 실행합니다.

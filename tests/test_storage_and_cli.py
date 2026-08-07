@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from travel_planner.cli import parse_date
+from travel_planner.input_processing import parse_city_preferences
 from travel_planner.models import ErrorRecord, Place, Recommendation
 from travel_planner.service import TravelPlan
 from travel_planner.storage import load_cached_plan, save_plan
@@ -15,6 +16,18 @@ class StorageAndCliTests(unittest.TestCase):
     def test_parse_date_rejects_invalid_date(self):
         with self.assertRaises(Exception):
             parse_date("2026/10/10")
+
+    def test_city_preferences_correct_aliases_and_extract_multiple_regions(self):
+        parsed = parse_city_preferences("강눙, 속초시 그리고 부산 맛집")
+        self.assertEqual(parsed.cities, ["강릉", "속초", "부산"])
+        self.assertEqual(parsed.corrections, ["강눙 -> 강릉", "속초시 -> 속초"])
+        self.assertEqual(parsed.ignored_terms, [])
+
+    def test_city_preferences_separate_unknown_terms_from_locations(self):
+        parsed = parse_city_preferences("서울과 제주도 가족 여행")
+        self.assertEqual(parsed.cities, ["서울", "제주"])
+        self.assertEqual(parsed.corrections, ["제주도 -> 제주"])
+        self.assertEqual(parsed.ignored_terms, [])
 
     def test_save_and_load_cache_round_trip(self):
         plan = TravelPlan(

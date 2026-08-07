@@ -9,6 +9,7 @@ from pathlib import Path
 from .clients import ApiRequestError, KakaoLocalClient, OpenAIClient
 from .config import ConfigurationError, get_settings, load_dotenv
 from .demo import DemoLlmClient, DemoPlaceClient
+from .input_processing import parse_city_preferences
 from .service import TravelPlanner
 from .storage import load_cached_plan, save_plan
 
@@ -29,11 +30,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-date", "--date", required=True, type=parse_date, help="여행 날짜 (YYYY-MM-DD)")
     parser.add_argument("--refresh", action="store_true", help="같은 날짜의 캐시가 있어도 API를 다시 호출합니다.")
     parser.add_argument("--demo", action="store_true", help="API 키 없이 안전한 데모 데이터를 생성합니다. 실제 API 호출은 하지 않습니다.")
+    parser.add_argument(
+        "--cities",
+        metavar="TEXT",
+        help="선호 지역 자유 입력. 예: '강눙, 속초시 그리고 부산 맛집' (오타·별칭 보정, 복수 지역 추출)",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    city_input = parse_city_preferences(args.cities) if args.cities else None
+    if city_input is not None and not city_input.cities:
+        build_parser().error("--cities에서 인식 가능한 국내 지역을 찾지 못했습니다. 예: 강릉, 속초")
+    if city_input is not None:
+        print(f"[input] 검색 지역: {', '.join(city_input.cities)}")
+        if city_input.corrections:
+            print(f"[input] 보정: {', '.join(city_input.corrections)}")
+        if city_input.ignored_terms:
+            print(f"[input] 지역으로 사용하지 않은 단어: {', '.join(city_input.ignored_terms)}")
     if not args.refresh:
         cached = load_cached_plan(RESULTS_DIR, args.date)
         if cached is not None:
@@ -69,7 +84,11 @@ def main(argv: list[str] | None = None) -> None:
             print("[3/3] 최종 리포트 생성 완료(LLM)")
 
     try:
-        plan = planner.create_plan(args.date, progress=show_progress)
+        plan = planner.create_plan(
+            args.date,
+            preferred_cities=city_input.cities if city_input is not None else None,
+            progress=show_progress,
+        )
     except (ApiRequestError, ValueError) as error:
         print(f"오류: 1차 LLM 추천을 완료하지 못했습니다. {error}")
         raise SystemExit(1) from error

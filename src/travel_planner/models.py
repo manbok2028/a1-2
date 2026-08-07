@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from .input_processing import normalize_city_names
+
 
 class SchemaError(ValueError):
     """Raised when the LLM does not return the required JSON schema."""
@@ -21,12 +23,7 @@ class Recommendation:
     @property
     def cities(self) -> list[str]:
         """Return unique cities, keeping the required primary city first."""
-        candidates = [self.recommended_city, *self.recommended_cities]
-        unique: list[str] = []
-        for city in candidates:
-            if city and city not in unique:
-                unique.append(city)
-        return unique
+        return normalize_city_names([self.recommended_city, *self.recommended_cities])
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Recommendation":

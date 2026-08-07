@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .clients import ApiRequestError
+from .input_processing import normalize_city_names
 from .models import ErrorRecord, Place, Recommendation, SchemaError
 
 
@@ -16,6 +17,7 @@ class TravelPlan:
     restaurants_by_city: dict[str, list[Place]]
     errors: list[ErrorRecord]
     report_markdown: str
+    requested_cities: list[str] = field(default_factory=list)
 
     def raw_data(self) -> dict[str, object]:
         return {
@@ -25,6 +27,7 @@ class TravelPlan:
                 city: [place.to_dict() for place in places] for city, places in self.restaurants_by_city.items()
             },
             "errors": [error.to_dict() for error in self.errors],
+            "requested_cities": self.requested_cities,
         }
 
 
@@ -35,13 +38,14 @@ class TravelPlanner:
         self.llm_client = llm_client
         self.place_client = place_client
 
-    def create_plan(self, travel_date: str, progress=None) -> TravelPlan:
+    def create_plan(self, travel_date: str, preferred_cities: list[str] | None = None, progress=None) -> TravelPlan:
+        requested_cities = normalize_city_names(preferred_cities or [])
         errors: list[ErrorRecord] = []
-        recommendation = self._recommend(travel_date, errors)
+        recommendation = self._recommend(travel_date, requested_cities, errors)
         if progress is not None:
             progress("recommendation", recommendation)
         restaurants_by_city: dict[str, list[Place]] = {}
-        for city in recommendation.cities:
+        for city in normalize_city_names([*requested_cities, *recommendation.cities]):
             try:
                 restaurants_by_city[city] = self.place_client.search_restaurants(city, limit=5)
                 if not restaurants_by_city[city]:
@@ -54,10 +58,10 @@ class TravelPlanner:
         report = self._generate_report(travel_date, recommendation, restaurants_by_city, errors)
         if progress is not None:
             progress("report", report)
-        return TravelPlan(travel_date, recommendation, restaurants_by_city, errors, report)
+        return TravelPlan(travel_date, recommendation, restaurants_by_city, errors, report, requested_cities)
 
-    def _recommend(self, travel_date: str, errors: list[ErrorRecord]) -> Recommendation:
-        prompt = _recommendation_prompt(travel_date)
+    def _recommend(self, travel_date: str, requested_cities: list[str], errors: list[ErrorRecord]) -> Recommendation:
+        prompt = _recommendation_prompt(travel_date, requested_cities)
         for attempt in range(2):
             try:
                 text = self.llm_client.complete(prompt, json_mode=True)
@@ -65,7 +69,7 @@ class TravelPlanner:
             except (SchemaError, json.JSONDecodeError) as error:
                 if attempt == 0:
                     errors.append(ErrorRecord("recommendation", "JSON_PARSE_RETRY", str(error)))
-                    prompt = _repair_prompt(travel_date)
+                    prompt = _repair_prompt(travel_date, requested_cities)
                     continue
                 errors.append(ErrorRecord("recommendation", "JSON_PARSE_ERROR", str(error)))
                 raise SchemaError("LLM JSON parsing failed after one retry") from error
@@ -98,8 +102,10 @@ def _parse_json_text(text: str) -> dict[str, object]:
     return data
 
 
-def _recommendation_prompt(travel_date: str) -> str:
+def _recommendation_prompt(travel_date: str, requested_cities: list[str]) -> str:
+    requested = ", ".join(requested_cities) if requested_cities else "없음"
     return f"""사용자의 국내 여행 날짜는 {travel_date}입니다. 실제 예보 확정 정보가 아니라 일반적인 계절성 추천을 제공합니다.
+사용자가 우선 검토해 달라고 입력한 지역: {requested}. 입력 지역이 있으면 추천 후보에 우선 포함하세요.
 반드시 JSON 객체만 반환하세요. Markdown, 코드 펜스, 설명 문장을 절대 넣지 마세요.
 필수 스키마:
 {{
@@ -111,14 +117,16 @@ def _recommendation_prompt(travel_date: str) -> str:
 }}"""
 
 
-def _repair_prompt(travel_date: str) -> str:
-    return f"""날짜 {travel_date}의 국내 여행 추천을 다시 작성하세요. 아래 필수 키를 가진 JSON 객체만 반환하세요.
+def _repair_prompt(travel_date: str, requested_cities: list[str]) -> str:
+    requested = ", ".join(requested_cities) if requested_cities else "없음"
+    return f"""날짜 {travel_date}의 국내 여행 추천을 다시 작성하세요. 사용자 요청 지역은 {requested}입니다. 아래 필수 키를 가진 JSON 객체만 반환하세요.
 recommended_city(string), recommended_cities(array of string), weather(string), events(array of string), reason(string)."""
 
 
 def _report_prompt(travel_date: str, recommendation: Recommendation, restaurants: dict[str, list[Place]], errors: list[ErrorRecord]) -> str:
     payload = {
         "date": travel_date,
+        "requested_cities": recommendation.cities,
         "recommendation": recommendation.to_dict(),
         "restaurants_by_city": {city: [place.to_dict() for place in places] for city, places in restaurants.items()},
         "errors": [error.to_dict() for error in errors],

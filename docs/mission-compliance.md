@@ -14,6 +14,7 @@
 | JSON + Markdown 결과 저장 | 완료 | `storage.py`의 `save_plan()` |
 | 보너스: 복수 도시 | 완료 | `recommended_cities` 반복 검색 |
 | 보너스: 결과 캐싱 | 완료 | `load_cached_plan()`, `--refresh` |
+| 고급 입력 보정·복수 지역 추출 | 완료 | `input_processing.py`, `--cities`, 단위 테스트 |
 | 테스트·CI | 완료 | `tests/`, `.github/workflows/quality.yml` |
 
 ## 제출 전 확인
