@@ -114,6 +114,7 @@ python -m unittest discover -s tests -v
 - [미션 적합성 및 체크리스트](docs/mission-compliance.md)
 - [API 설계·보안·오류 처리 정책](docs/api-design-and-security.md)
 - [동료 평가 안내서](docs/peer-review-guide.md)
+- [동료 평가용 2분 설명서](docs/peer-review-briefing.md)
 - [데모 실행 및 Git 명령 로그](evidence/command-logs.md)
 
 ## 프로젝트 구조
