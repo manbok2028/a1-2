@@ -25,10 +25,28 @@ def parse_date(value: str) -> str:
         raise argparse.ArgumentTypeError("날짜는 YYYY-MM-DD 형식이어야 합니다. 예: 2026-10-10") from error
 
 
+def parse_days(value: str) -> int:
+    try:
+        days = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("여행 일수는 1부터 14 사이의 정수여야 합니다.") from error
+    if not 1 <= days <= 14:
+        raise argparse.ArgumentTypeError("여행 일수는 1부터 14 사이여야 합니다.")
+    return days
+
+
+def parse_interests(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [part.strip() for part in value.replace("/", ",").split(",") if part.strip()]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="LLM + Kakao Local 기반 국내 여행 추천 프로그램")
     parser.add_argument("-date", "--date", required=True, type=parse_date, help="여행 날짜 (YYYY-MM-DD)")
     parser.add_argument("--refresh", action="store_true", help="같은 날짜의 캐시가 있어도 API를 다시 호출합니다.")
+    parser.add_argument("--days", type=parse_days, default=1, help="여행 일수 (1~14, 기본값: 1)")
+    parser.add_argument("--interests", metavar="TEXT", help="관심사. 쉼표로 구분합니다. 예: 맛집,바다,전시")
     parser.add_argument("--demo", action="store_true", help="API 키 없이 안전한 데모 데이터를 생성합니다. 실제 API 호출은 하지 않습니다.")
     parser.add_argument(
         "--cities",
@@ -41,6 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     city_input = parse_city_preferences(args.cities) if args.cities else None
+    interests = parse_interests(args.interests)
     if city_input is not None and not city_input.cities:
         build_parser().error("--cities에서 인식 가능한 국내 지역을 찾지 못했습니다. 예: 강릉, 속초")
     if city_input is not None:
@@ -49,9 +68,13 @@ def main(argv: list[str] | None = None) -> None:
             print(f"[input] 보정: {', '.join(city_input.corrections)}")
         if city_input.ignored_terms:
             print(f"[input] 지역으로 사용하지 않은 단어: {', '.join(city_input.ignored_terms)}")
+    if interests:
+        print(f"[input] 관심사: {', '.join(interests)}")
+    print(f"[input] 여행 일수: {args.days}일")
     if not args.refresh:
         cached = load_cached_plan(RESULTS_DIR, args.date)
-        if cached is not None:
+        requested_cities = city_input.cities if city_input is not None else []
+        if cached is not None and cached.requested_cities == requested_cities and cached.trip_days == args.days and cached.interests == interests:
             raw_path, report_path = save_plan(RESULTS_DIR, cached)
             print("[cache] 같은 날짜의 결과를 사용했습니다. 외부 API 호출을 건너뜁니다.")
             print(f"완료! {raw_path} 및 {report_path}를 확인하세요.")
@@ -87,6 +110,8 @@ def main(argv: list[str] | None = None) -> None:
         plan = planner.create_plan(
             args.date,
             preferred_cities=city_input.cities if city_input is not None else None,
+            trip_days=args.days,
+            interests=interests,
             progress=show_progress,
         )
     except (ApiRequestError, ValueError) as error:

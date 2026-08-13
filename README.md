@@ -101,13 +101,15 @@ python -m travel_planner --date "2026-10-10" --refresh
 ## CLI 사용법
 
 ```text
-python -m travel_planner --date YYYY-MM-DD [--cities "지역 입력"] [--demo] [--refresh]
+python -m travel_planner --date YYYY-MM-DD [--cities "지역 입력"] [--days 1~14] [--interests "관심사"] [--demo] [--refresh]
 ```
 
 | 옵션 | 역할 |
 |---|---|
 | `--date` | 필수. `YYYY-MM-DD` 형식의 여행 날짜입니다. |
 | `--cities` | 선택. 선호 지역을 자연어로 입력합니다. 복수 도시와 별칭 보정을 지원합니다. |
+| `--days` | 선택. 여행 일수입니다. 1일부터 14일까지 지정하며 기본값은 1일입니다. |
+| `--interests` | 선택. 관심사를 쉼표로 입력합니다. 예: `맛집,바다,전시` |
 | `--demo` | 외부 API를 호출하지 않는 명시적 오프라인 예시 모드입니다. |
 | `--refresh` | 기존 날짜 결과가 있어도 캐시를 무시하고 새로 실행합니다. |
 
@@ -115,6 +117,12 @@ python -m travel_planner --date YYYY-MM-DD [--cities "지역 입력"] [--demo] [
 
 ```powershell
 python -m travel_planner --date "2026-10-11" --cities "강릉, 속초 그리고 부산 맛집" --demo --refresh
+```
+
+여행 일수와 관심사를 함께 입력하면 LLM이 일정 구성에 반영합니다.
+
+```powershell
+python -m travel_planner --date "2026-10-11" --cities "강릉, 속초" --days 2 --interests "맛집,바다,전시" --refresh
 ```
 
 프로그램은 지역명만 추려 중복 없이 처리하고, 알려진 별칭/오타는 보정합니다. 지역이 아닌 단어는 장소 검색 입력에 섞이지 않도록 분리합니다.

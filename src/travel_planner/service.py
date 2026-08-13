@@ -18,6 +18,8 @@ class TravelPlan:
     errors: list[ErrorRecord]
     report_markdown: str
     requested_cities: list[str] = field(default_factory=list)
+    trip_days: int = 1
+    interests: list[str] = field(default_factory=list)
 
     def raw_data(self) -> dict[str, object]:
         return {
@@ -28,6 +30,8 @@ class TravelPlan:
             },
             "errors": [error.to_dict() for error in self.errors],
             "requested_cities": self.requested_cities,
+            "trip_days": self.trip_days,
+            "interests": self.interests,
         }
 
 
@@ -38,10 +42,21 @@ class TravelPlanner:
         self.llm_client = llm_client
         self.place_client = place_client
 
-    def create_plan(self, travel_date: str, preferred_cities: list[str] | None = None, progress=None) -> TravelPlan:
+    def create_plan(
+        self,
+        travel_date: str,
+        preferred_cities: list[str] | None = None,
+        *,
+        trip_days: int = 1,
+        interests: list[str] | None = None,
+        progress=None,
+    ) -> TravelPlan:
+        if not 1 <= trip_days <= 14:
+            raise ValueError("trip_days must be between 1 and 14")
         requested_cities = normalize_city_names(preferred_cities or [])
+        normalized_interests = _normalize_interests(interests or [])
         errors: list[ErrorRecord] = []
-        recommendation = self._recommend(travel_date, requested_cities, errors)
+        recommendation = self._recommend(travel_date, requested_cities, errors, trip_days, normalized_interests)
         if progress is not None:
             progress("recommendation", recommendation)
         restaurants_by_city: dict[str, list[Place]] = {}
@@ -55,13 +70,17 @@ class TravelPlanner:
                 errors.append(ErrorRecord("place_search", error.category, str(error)))
         if progress is not None:
             progress("place_search", restaurants_by_city)
-        report = self._generate_report(travel_date, recommendation, restaurants_by_city, errors)
+        report = self._generate_report(travel_date, recommendation, restaurants_by_city, errors, trip_days, normalized_interests)
         if progress is not None:
             progress("report", report)
-        return TravelPlan(travel_date, recommendation, restaurants_by_city, errors, report, requested_cities)
+        return TravelPlan(
+            travel_date, recommendation, restaurants_by_city, errors, report, requested_cities, trip_days, normalized_interests
+        )
 
-    def _recommend(self, travel_date: str, requested_cities: list[str], errors: list[ErrorRecord]) -> Recommendation:
-        prompt = _recommendation_prompt(travel_date, requested_cities)
+    def _recommend(
+        self, travel_date: str, requested_cities: list[str], errors: list[ErrorRecord], trip_days: int, interests: list[str]
+    ) -> Recommendation:
+        prompt = _recommendation_prompt(travel_date, requested_cities) + _travel_context(trip_days, interests)
         for attempt in range(2):
             try:
                 text = self.llm_client.complete(prompt, json_mode=True)
@@ -69,7 +88,7 @@ class TravelPlanner:
             except (SchemaError, json.JSONDecodeError) as error:
                 if attempt == 0:
                     errors.append(ErrorRecord("recommendation", "JSON_PARSE_RETRY", str(error)))
-                    prompt = _repair_prompt(travel_date, requested_cities)
+                    prompt = _repair_prompt(travel_date, requested_cities) + _travel_context(trip_days, interests)
                     continue
                 errors.append(ErrorRecord("recommendation", "JSON_PARSE_ERROR", str(error)))
                 raise SchemaError("LLM JSON parsing failed after one retry") from error
@@ -78,8 +97,16 @@ class TravelPlanner:
                 raise
         raise AssertionError("unreachable")
 
-    def _generate_report(self, travel_date: str, recommendation: Recommendation, restaurants: dict[str, list[Place]], errors: list[ErrorRecord]) -> str:
-        prompt = _report_prompt(travel_date, recommendation, restaurants, errors)
+    def _generate_report(
+        self,
+        travel_date: str,
+        recommendation: Recommendation,
+        restaurants: dict[str, list[Place]],
+        errors: list[ErrorRecord],
+        trip_days: int,
+        interests: list[str],
+    ) -> str:
+        prompt = _report_prompt(travel_date, recommendation, restaurants, errors) + _schedule_context(trip_days, interests)
         try:
             report = self.llm_client.complete(prompt)
             if report.strip():
@@ -100,6 +127,23 @@ def _parse_json_text(text: str) -> dict[str, object]:
     if not isinstance(data, dict):
         raise SchemaError("LLM JSON root must be an object")
     return data
+
+
+def _normalize_interests(interests: list[str]) -> list[str]:
+    return list(dict.fromkeys(item.strip() for item in interests if item.strip()))
+
+
+def _travel_context(trip_days: int, interests: list[str]) -> str:
+    interest_text = ", ".join(interests) if interests else "특별한 선호 없음"
+    return f"\n여행 일수는 {trip_days}일이며 관심사는 {interest_text}입니다. 이 조건을 추천에 반영하세요."
+
+
+def _schedule_context(trip_days: int, interests: list[str]) -> str:
+    interest_text = ", ".join(interests) if interests else "특별한 선호 없음"
+    return (
+        f"\n반드시 '## {trip_days}일 일정 제안' 섹션을 만들고 Day 1부터 Day {trip_days}까지 "
+        f"오전·오후·저녁 일정과 이동 동선을 작성하세요. 관심사({interest_text})를 우선 반영하세요."
+    )
 
 
 def _recommendation_prompt(travel_date: str, requested_cities: list[str]) -> str:

@@ -34,6 +34,15 @@ def load_cached_plan(results_dir: Path, travel_date: str) -> TravelPlan | None:
             if isinstance(items, list)
         }
         errors = [ErrorRecord(**item) for item in raw.get("errors", []) if isinstance(item, dict)]
-        return TravelPlan(travel_date, recommendation, restaurants, errors, report_path.read_text(encoding="utf-8"))
+        return TravelPlan(
+            travel_date,
+            recommendation,
+            restaurants,
+            errors,
+            report_path.read_text(encoding="utf-8"),
+            [str(city) for city in raw.get("requested_cities", []) if isinstance(city, str)],
+            int(raw.get("trip_days", 1)),
+            [str(interest) for interest in raw.get("interests", []) if isinstance(interest, str)],
+        )
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
         return None
