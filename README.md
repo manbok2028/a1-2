@@ -1,34 +1,50 @@
 # Korea Travel Planner · Python 응용 API 활용
 
-> GitHub Pages 소개 페이지: Pages 활성화 후 `https://manbok2028.github.io/a1-2/`에서 확인할 수 있습니다.
+> 여행 날짜와 선호 지역을 입력하면 **LLM 추천 → Kakao Local 장소 검색 → Markdown/JSON 리포트 저장**을 차례로 수행하는 국내 여행지 추천 CLI 프로그램입니다.
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
-![OpenAI](https://img.shields.io/badge/LLM-OpenAI_compatible-412991?logo=openai&logoColor=white)
-![Kakao](https://img.shields.io/badge/Places-Kakao_Local-FFCD00?logo=kakaotalk&logoColor=000000)
-![CLI](https://img.shields.io/badge/UI-CLI-4B8BBE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+![LLM](https://img.shields.io/badge/LLM-OpenAI%20compatible-412991?logo=openai&logoColor=white)
+![Kakao](https://img.shields.io/badge/Places-Kakao%20Local-FFCD00?logo=kakaotalk&logoColor=000000)
+![Interface](https://img.shields.io/badge/Interface-CLI-1769AA)
 
-사용자가 입력한 여행 날짜를 바탕으로 **LLM(OpenAI 계열 API)** 이 국내 추천 지역·계절성 날씨·행사 후보를 JSON으로 만들고, **Kakao Local API**가 지역별 맛집을 검색한 뒤, LLM이 최종 Markdown 여행 리포트를 생성하는 CLI 프로그램입니다.
+## 프로젝트 한눈에 보기
 
-> 제출 요약: 필수 기능과 보너스(복수 지역 추천, 날짜별 결과 캐싱)를 구현했습니다. API 키는 코드·README·결과 파일에 포함하지 않습니다.
+- 공개 소개 페이지: [manbok2028.github.io/a1-2](https://manbok2028.github.io/a1-2/)
+- 저장소: [github.com/manbok2028/a1-2](https://github.com/manbok2028/a1-2)
+- 대상 미션: **Python 응용: API 활용 국내 여행지 추천 프로그램 개발**
+- 핵심 가치: 여러 API의 결과를 연결하고, 실패·비용·결과 저장까지 고려한 실사용형 CLI 파이프라인을 학습한다.
 
-## 처리 흐름
+## 어떤 일을 하나요?
 
 ```text
--date YYYY-MM-DD
-       │
-       ▼
-[1] LLM 1차 추천 JSON ──► recommended_city / weather / events / reason
-       │
-       ▼
-[2] Kakao Local 맛집 검색 ──► 도시별 맛집 목록 (실패·0건이어도 계속)
-       │
-       ▼
-[3] LLM Markdown 리포트 ──► results/<date>_raw.json + <date>_travel_plan.md
+여행 날짜 / 선호 지역 입력
+        ↓
+[1] OpenAI 호환 LLM: 추천 지역·날씨/계절 가이드·행사·추천 이유를 JSON으로 생성
+        ↓
+[2] Kakao Local API: 각 추천 지역의 맛집·장소를 검색
+        ↓
+[3] OpenAI 호환 LLM: 수집 결과를 읽기 쉬운 Markdown 여행 리포트로 작성
+        ↓
+results/<날짜>_raw.json + results/<날짜>_travel_plan.md 저장
 ```
 
-## 빠른 실행
+리포트에는 추천 지역, 추천 이유, 여행 시기 참고, 행사/계절 참고, 지역별 맛집·장소, 1일 일정, 오류 요약이 포함됩니다. 원본 JSON도 함께 남겨 후속 처리나 검증에 사용할 수 있습니다.
 
-### 1. 설치
+## 핵심 기능
+
+| 기능 | 설명 |
+|---|---|
+| LLM 기반 여행지 추천 | 날짜와 선택 지역을 바탕으로 구조화된 JSON 추천을 받습니다. |
+| 지역별 장소·맛집 검색 | Kakao Local API에서 상호명, 분류, 주소, 장소 URL, 좌표를 수집합니다. |
+| Markdown + JSON 결과 저장 | 사람이 읽는 리포트와 기계가 읽는 원본 데이터를 함께 저장합니다. |
+| 데모 모드 | `--demo`로 외부 API 호출 없이 전체 실행 흐름을 검증합니다. |
+| 날짜별 캐시 | 같은 날짜의 결과가 있으면 API 재호출을 피합니다. 필요 시 `--refresh`로 갱신합니다. |
+| 복수 도시·별칭 보정 | `--cities`에서 복수 지역을 추출하고, 자주 틀리는 지역명을 보정합니다. |
+| 오류 복구 | 장소 검색 오류나 0건 결과가 있어도 오류를 기록하고 리포트 생성은 계속합니다. |
+
+## 빠른 시작
+
+### 1. 저장소를 내려받고 설치하기
 
 ```powershell
 git clone https://github.com/manbok2028/a1-2.git
@@ -36,132 +52,140 @@ cd a1-2
 python -m pip install --no-deps .
 ```
 
-### 2. API 키 설정
+### 2. API 키 없이 데모 실행하기
 
-`.env.example`을 복사해 `.env`를 만들고 실제 키를 입력합니다. `.env`는 `.gitignore`에 포함되어 GitHub에 올라가지 않습니다.
+처음에는 아래 명령으로 전체 구조를 안전하게 확인하는 것을 권장합니다. 외부 API를 호출하지 않으며 학습용 예시 데이터로 결과 파일을 만듭니다.
+
+```powershell
+python -m travel_planner --date "2026-10-11" --demo --refresh
+```
+
+완료 후 아래 두 파일을 확인합니다.
+
+```text
+results/2026-10-11_raw.json
+results/2026-10-11_travel_plan.md
+```
+
+> 데모의 장소명·주소·날씨/행사 정보는 **학습용 예시**입니다. 실제 영업·날씨 정보로 사용하면 안 됩니다.
+
+### 3. 실제 API로 실행하기
+
+프로젝트 루트에서 `.env.example`을 복사하여 `.env`를 만듭니다.
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-`.env` 예시입니다. `YOUR_KEY` 부분을 실제 값으로 바꾸되, 키 값 자체는 절대 커밋하거나 공유하지 않습니다.
+`.env` 파일에는 본인이 발급한 실제 키만 넣습니다. 따옴표, 설명 문구, 공백을 넣지 않습니다.
 
 ```text
-OPENAI_API_KEY=YOUR_KEY
-KAKAO_REST_API_KEY=YOUR_KEY
+OPENAI_API_KEY=실제_OpenAI_API_키
+KAKAO_REST_API_KEY=실제_카카오_REST_API_키
 ```
 
-현재 PowerShell 세션에서만 설정하려면 다음처럼 사용합니다.
+그 다음 실제 API를 호출합니다.
 
 ```powershell
-$env:OPENAI_API_KEY="YOUR_KEY"
-$env:KAKAO_REST_API_KEY="YOUR_KEY"
+python -m travel_planner --date "2026-10-10" --refresh
 ```
 
-### 3. 실제 API 실행
+PowerShell에서 해당 창에만 일시적으로 키를 설정할 수도 있습니다.
 
 ```powershell
-python -m travel_planner --date "2026-10-10"
+$env:OPENAI_API_KEY="실제_OpenAI_API_키"
+$env:KAKAO_REST_API_KEY="실제_카카오_REST_API_키"
+python -m travel_planner --date "2026-10-10" --refresh
 ```
 
-날짜 형식이 잘못되면 `argparse`가 사용법을 출력하고 종료합니다. API 키가 없으면 프로그램은 API를 호출하지 않고 설정 방법을 안내하며 종료합니다.
+## CLI 사용법
 
-### 4. 키 없이 구조 확인하기
+```text
+python -m travel_planner --date YYYY-MM-DD [--cities "지역 입력"] [--demo] [--refresh]
+```
 
-`--demo`는 **실제 API를 호출하지 않는 명시적 데모 모드**입니다. 결과 파일 구조·CLI 흐름·캐싱을 안전하게 확인할 때만 사용합니다.
+| 옵션 | 역할 |
+|---|---|
+| `--date` | 필수. `YYYY-MM-DD` 형식의 여행 날짜입니다. |
+| `--cities` | 선택. 선호 지역을 자연어로 입력합니다. 복수 도시와 별칭 보정을 지원합니다. |
+| `--demo` | 외부 API를 호출하지 않는 명시적 오프라인 예시 모드입니다. |
+| `--refresh` | 기존 날짜 결과가 있어도 캐시를 무시하고 새로 실행합니다. |
+
+복수 지역 입력 예시입니다.
 
 ```powershell
-python -m travel_planner --date "2026-10-10" --demo --refresh
+python -m travel_planner --date "2026-10-11" --cities "강릉, 속초 그리고 부산 맛집" --demo --refresh
 ```
 
-## 결과물
+프로그램은 지역명만 추려 중복 없이 처리하고, 알려진 별칭/오타는 보정합니다. 지역이 아닌 단어는 장소 검색 입력에 섞이지 않도록 분리합니다.
 
-여행 리포트에는 AI 추천 문장만이 아니라 **여행 시기 날씨 가이드, 행사·계절 참고, Kakao Local 장소·맛집 검색 결과(상호·분류·주소·지도 링크)**를 항상 함께 기록합니다. 날씨 가이드는 여행 계획용 요약이므로 출발 직전에는 기상청 등 공식 예보를 다시 확인해야 합니다.
-
-실행하면 `results/` 폴더에 아래 두 파일이 생성됩니다. 개인 API 키와 실제 개인 정보는 저장하지 않습니다.
+## 결과 파일 구조
 
 | 파일 | 포함 내용 |
 |---|---|
-| `<date>_raw.json` | 1차 추천 JSON, 도시별 맛집 목록, 오류 요약(`errors`) |
-| `<date>_travel_plan.md` | 추천 지역·이유·날씨·행사·맛집·1일 일정·오류 요약 |
+| `results/<date>_raw.json` | 추천 JSON, 지역별 장소/맛집 목록, 오류 요약, 요청 지역 |
+| `results/<date>_travel_plan.md` | 추천 근거, 여행 시기·행사 참고, 장소/맛집, 1일 일정, 오류 요약 |
 
-같은 날짜로 다시 실행하면 기본적으로 캐시된 두 결과 파일을 사용해 외부 API 호출을 건너뜁니다. 새로 호출하려면 `--refresh`를 붙입니다. 이는 보너스 ‘결과 캐싱’ 기능입니다.
+예시 리포트는 [results/2026-10-11_travel_plan.md](results/2026-10-11_travel_plan.md)에서 확인할 수 있습니다.
 
-## 에러 처리 정책
+## 오류 처리와 비용 관리
 
-| 상황 | 동작 |
+| 상황 | 처리 방식 |
 |---|---|
-| API 키 없음 | 즉시 종료하고 환경변수·`.env` 설정 방법 출력 |
-| LLM JSON 파싱 실패 | JSON 전용 재요청을 최대 1회 수행 |
-| Kakao 인증·네트워크·쿼터 오류 | `errors`에 기록하고 맛집을 `데이터 없음` 처리한 뒤 리포트 생성 계속 |
-| 맛집 0건 | 중단하지 않고 `EMPTY_RESULT`를 기록한 뒤 리포트 생성 계속 |
-| 최종 LLM 리포트 오류 | 오류를 기록하고 구조화된 데이터로 Markdown 대체 리포트 생성 |
+| API 키가 없음 | 실제 요청 전 종료하고 설정 방법을 안내합니다. |
+| 날짜 형식 오류 | `argparse`가 사용법과 올바른 날짜 형식을 알려 줍니다. |
+| LLM JSON 형식 오류 | 필수 필드를 검증하고 JSON 전용 보정 요청을 **최대 1회** 시도합니다. |
+| Kakao 인증/네트워크/쿼터 오류 | `errors`에 기록합니다. 장소 목록은 비어도 최종 리포트는 계속 생성합니다. |
+| 장소 검색 결과 0건 | `EMPTY_RESULT`로 기록하고 프로그램을 중단하지 않습니다. |
+| 최종 리포트 생성 오류 | 이미 수집한 구조화 데이터를 사용해 대체 Markdown 리포트를 만듭니다. |
+| 동일 날짜 재실행 | JSON과 Markdown이 모두 있으면 캐시를 사용해 비용과 시간을 줄입니다. |
 
-## REST API 학습 포인트
+## API 키 보안
 
-- **GET**: Kakao Local 맛집 검색처럼 URL 쿼리로 조회하는 요청에 사용합니다.
-- **POST**: LLM에 프롬프트와 생성 옵션을 JSON 본문으로 보내는 요청에 사용합니다.
-- **구조화된 출력**: 1차 LLM 응답은 JSON 스키마를 검사한 뒤 `recommended_city`를 다음 Kakao 검색의 입력으로 연결합니다.
-- **보안**: 키를 환경변수·`.env`로 분리하면 코드 공유·키 교체·과금 사고 예방에 유리합니다.
-
-## 테스트
-
-```powershell
-python -m pip install --no-deps .
-python -m unittest discover -s tests -v
-```
-
-테스트는 LLM JSON 재시도, 장소 API 인증 오류 후 리포트 지속, 결과 저장·캐싱, 날짜 검증을 외부 API 호출 없이 확인합니다.
-
-## 문서와 평가 자료
-
-- [미션 적합성 및 체크리스트](docs/mission-compliance.md)
-- [API 설계·보안·오류 처리 정책](docs/api-design-and-security.md)
-- [동료 평가 안내서](docs/peer-review-guide.md)
-- [동료 평가용 2분 설명서](docs/peer-review-briefing.md)
-- [데모 실행 및 Git 명령 로그](evidence/command-logs.md)
+- 실제 키는 `.env` 또는 운영 환경 변수에만 둡니다.
+- `.env`는 `.gitignore`에 포함되어 GitHub에 커밋되지 않습니다.
+- README, 코드, 결과 JSON/Markdown, 스크린샷에 실제 키를 적지 않습니다.
+- 키 유출이 의심되면 발급 사이트에서 즉시 폐기하고 새 키를 발급합니다.
+- 실제 여행 전에는 날씨·행사·영업 정보의 공식 출처를 다시 확인해야 합니다.
 
 ## 프로젝트 구조
 
 ```text
-src/travel_planner/
-├─ cli.py        # argparse CLI, 진행 로그, 캐시 정책
-├─ config.py     # .env/환경변수와 키 검증
-├─ clients.py    # OpenAI 호환 API POST, Kakao Local GET
-├─ service.py    # 3단계 오케스트레이션과 오류 정책
-├─ models.py     # 추천·장소·오류 데이터 모델
-├─ storage.py    # JSON/Markdown 저장과 캐시 로딩
-└─ demo.py       # API 키 없는 명시적 데모 클라이언트
-tests/           # 외부 API 없이 실행되는 unittest
-results/         # 실행 결과 저장 위치
-docs/            # 설계·평가 문서
-evidence/        # 텍스트 실행 증빙
+a1-2/
+├─ src/travel_planner/
+│  ├─ cli.py               # argparse 입력, 진행 메시지, 캐시 확인
+│  ├─ config.py            # .env/환경 변수 로드와 키 검증
+│  ├─ clients.py           # OpenAI 호환 API POST, Kakao Local API GET
+│  ├─ input_processing.py  # 지역 입력 추출·별칭 보정
+│  ├─ service.py           # 3단계 파이프라인과 오류 복구
+│  ├─ models.py            # 추천·장소·오류 데이터 모델
+│  ├─ storage.py           # JSON/Markdown 저장과 캐시 로드
+│  └─ demo.py              # 외부 API를 호출하지 않는 데모 클라이언트
+├─ tests/                  # unittest 기반 자동 테스트
+├─ results/                # 실행 결과 JSON과 Markdown
+├─ docs/                   # API 설계, 평가 안내, GitHub Pages 소개
+├─ evidence/               # 실행·검증 로그
+├─ .env.example            # 키 이름만 담긴 예시 파일
+└─ pyproject.toml          # 패키지와 CLI 진입점 설정
 ```
 
-## 고급 지역 입력 처리
-
-선택 옵션 `--cities`는 여러 지역을 한 줄로 입력할 수 있게 하며, API 요청 전에 결정적인 규칙으로 정리합니다.
+## 테스트
 
 ```powershell
-python -m travel_planner --date "2026-10-11" --cities "강눙, 속초시 그리고 부산 맛집" --demo --refresh
+python -m unittest discover -s tests -v
 ```
 
-위 예시는 `강릉, 속초, 부산`으로 보정·추출됩니다. 처리 원칙은 다음과 같습니다.
+테스트는 날짜 검증, JSON 재시도, 장소 API 오류 처리, 결과 저장/캐시, 복수 지역 추출, 데모 리포트의 날씨·장소 표시를 외부 API 호출 없이 확인합니다.
 
-- **키워드 보정**: `강눙 → 강릉`, `제주도 → 제주`, `속초시 → 속초`처럼 코드에 명시한 별칭만 보정합니다.
-- **여러 지역 추출**: 쉼표·슬래시·`그리고`·`과/와`가 섞여도 인식한 지역을 입력 순서대로 중복 없이 유지합니다.
-- **복수 항목 분리**: `맛집`, `가족 여행`처럼 지역이 아닌 단어는 Kakao 지역 검색어에 섞지 않고 CLI에 알려 줍니다.
-- **안전한 실패**: 인식 가능한 지역이 하나도 없으면 API를 호출하지 않고 사용 예시를 안내합니다. 사전 목록에 없는 지역은 임의로 추측하지 않습니다.
+## 문서와 평가 자료
 
-사용자 입력 지역은 1차 LLM 프롬프트에 우선 후보로 전달되고, 실제 맛집 검색은 입력 지역과 LLM 추천 지역을 합쳐 중복 없이 실행합니다. 이 규칙은 테스트로 검증됩니다.
+- [API 설계·보안·오류 처리 정책](docs/api-design-and-security.md)
+- [미션 적합성 및 제출 체크리스트](docs/mission-compliance.md)
+- [동료 평가 안내서](docs/peer-review-guide.md)
+- [동료 평가 2분 설명서](docs/peer-review-briefing.md)
+- [실행·검증 명령 로그](evidence/command-logs.md)
+- [GitHub Pages 프로젝트 소개](https://manbok2028.github.io/a1-2/)
 
-## 설계 참고와 운영 체크리스트
+## 학습 포인트
 
-- **날짜 검증**: `-date 2026/10/10`처럼 형식이 틀리면 `argparse` 사용법과 `YYYY-MM-DD` 예시를 출력하고 종료합니다.
-- **스키마 실패 메시지**: 1차 LLM JSON에 `recommended_city`, `weather`, `reason`이 없거나 빈 문자열이면 `SchemaError`가 발생하고, 한 번만 JSON 전용 보정 프롬프트를 재시도합니다.
-- **오류 레코드 형식 v1**: 결과 JSON의 `errors`는 항상 `step`, `type`, `message` 세 필드를 사용합니다. 예: `{"step":"place_search","type":"EMPTY_RESULT","message":"0 results ..."}`.
-- **401/403 점검 순서**: `.env`의 키 이름 확인 → 키 값 재발급 여부 확인 → Kakao REST API 키인지 확인 → API 제공자 콘솔의 권한·쿼터 확인 → `--demo`로 코드 흐름 분리 확인 순서로 점검합니다.
-- **캐시 정책**: 캐시는 같은 날짜의 JSON과 Markdown이 모두 있을 때만 유효하며 시간 만료는 두지 않습니다. 최신 결과가 필요하면 항상 `--refresh`를 사용합니다.
-- **구조화된 출력의 장단점**: JSON 스키마는 다음 API로 전달할 도시를 안정적으로 만들고 테스트하기 쉽습니다. 반면 자유 텍스트의 세부 표현은 잃을 수 있으므로 최종 리포트는 별도 Markdown 단계에서 생성합니다.
-
-모듈의 책임도 분리했습니다. `cli.py`는 입력·출력, `input_processing.py`는 지역 보정·추출, `config.py`는 키 검증, `clients.py`는 HTTP, `service.py`는 흐름·재시도, `storage.py`는 결과·캐시를 담당합니다. OpenAI 호환 서버를 바꾸려면 코드가 아니라 `OPENAI_BASE_URL`과 `OPENAI_MODEL` 환경변수만 변경하면 됩니다.
+이 프로젝트는 단순 API 호출 예제가 아니라, 사용자 입력을 검증하고 여러 API 결과를 연결하며, 오류와 비용을 관리하고, 재사용 가능한 결과물을 남기는 과정을 다룹니다. `cli.py`는 입력/출력, `clients.py`는 HTTP 통신, `service.py`는 파이프라인, `storage.py`는 결과와 캐시를 책임지도록 모듈을 분리했습니다.
