@@ -41,13 +41,13 @@ def recommendation_json(city="강릉"):
 
 
 class TravelPlannerTests(unittest.TestCase):
-    def test_demo_report_keeps_weather_and_place_details_visible(self):
+    def test_example_report_keeps_weather_and_place_details_visible(self):
         plan = TravelPlanner(DemoLlmClient(), DemoPlaceClient()).create_plan("2026-10-10")
 
         self.assertIn("여행 시기 날씨 가이드", plan.report_markdown)
         self.assertIn(plan.recommendation.weather, plan.report_markdown)
         self.assertIn("맛집 및 장소 검색 결과", plan.report_markdown)
-        self.assertIn("강릉 바다식당 (데모)", plan.report_markdown)
+        self.assertIn("강릉 바다식당 (예시)", plan.report_markdown)
         self.assertNotIn("데모 맛집 데이터", plan.report_markdown)
         self.assertNotIn("실제 예보가 아닌 데모 정보", plan.report_markdown)
 
