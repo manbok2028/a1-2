@@ -83,7 +83,7 @@ class TravelPlanner:
         try:
             report = self.llm_client.complete(prompt)
             if report.strip():
-                return report.strip()
+                return enrich_report_with_source_data(report.strip(), recommendation, restaurants)
             raise ApiRequestError("openai", "Empty report response")
         except ApiRequestError as error:
             errors.append(ErrorRecord("report_generation", error.category, str(error)))
@@ -138,6 +138,48 @@ def _report_prompt(travel_date: str, recommendation: Recommendation, restaurants
         "맛집이 없으면 반드시 '데이터 없음'이라고 쓰세요. 입력 데이터에 없는 사실은 단정하지 마세요.\n\n"
     )
     return instructions + json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def enrich_report_with_source_data(
+    report: str,
+    recommendation: Recommendation,
+    restaurants: dict[str, list[Place]],
+) -> str:
+    """Keep essential weather and place-search facts visible in every report.
+
+    The final LLM text improves readability, but it can omit details from the
+    structured recommendation or Kakao result. This appendix preserves those
+    source facts so users can review them without relying on the model to
+    repeat every item.
+    """
+
+    lines = [
+        report.rstrip(),
+        "",
+        "## 확인한 여행 정보",
+        "",
+        "### 여행 시기 날씨 가이드",
+        recommendation.weather,
+        "",
+        "> 날씨 정보는 여행 계획을 위한 요약입니다. 실제 출발 전에는 기상청 등 공식 예보를 다시 확인하세요.",
+        "",
+        "### 행사·계절 참고",
+    ]
+    lines.extend([f"- {event}" for event in recommendation.events] or ["- 제공된 행사 정보가 없습니다."])
+    lines.extend(["", "### 장소·맛집 검색 결과"])
+
+    for city, places in restaurants.items():
+        lines.append(f"#### {city}")
+        if not places:
+            lines.append("- 검색 결과가 없습니다.")
+            continue
+        for place in places:
+            category = place.category or "분류 정보 없음"
+            address = place.address or "주소 정보 없음"
+            link = f" · [지도/상세]({place.url})" if place.url else ""
+            lines.append(f"- **{place.name}** — {category} · {address}{link}")
+
+    return "\n".join(lines)
 
 
 def render_fallback_report(travel_date: str, recommendation: Recommendation, restaurants: dict[str, list[Place]], errors: list[ErrorRecord]) -> str:

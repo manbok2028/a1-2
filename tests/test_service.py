@@ -2,6 +2,7 @@ import json
 import unittest
 
 from travel_planner.clients import ApiRequestError
+from travel_planner.demo import DemoLlmClient, DemoPlaceClient
 from travel_planner.models import Place
 from travel_planner.service import TravelPlanner
 
@@ -40,6 +41,14 @@ def recommendation_json(city="강릉"):
 
 
 class TravelPlannerTests(unittest.TestCase):
+    def test_demo_report_keeps_weather_and_place_details_visible(self):
+        plan = TravelPlanner(DemoLlmClient(), DemoPlaceClient()).create_plan("2026-10-10")
+
+        self.assertIn("여행 시기 날씨 가이드", plan.report_markdown)
+        self.assertIn(plan.recommendation.weather, plan.report_markdown)
+        self.assertIn("장소·맛집 검색 결과", plan.report_markdown)
+        self.assertIn("강릉 바다식당 (데모)", plan.report_markdown)
+
     def test_creates_plan_with_restaurants_and_markdown_report(self):
         llm = FakeLlm([recommendation_json(), "# 여행 리포트\n\n## 추천 지역\n강릉"])
         places = FakePlaces({"강릉": [Place("맛집", "강릉시")], "속초": []})
@@ -64,4 +73,6 @@ class TravelPlannerTests(unittest.TestCase):
         plan = TravelPlanner(llm, places).create_plan("2026-10-10")
         self.assertEqual(plan.restaurants_by_city["제주"], [])
         self.assertTrue(any(item.type == "AUTH_ERROR" for item in plan.errors))
-        self.assertEqual(plan.report_markdown, "# 리포트")
+        self.assertTrue(plan.report_markdown.startswith("# 리포트"))
+        self.assertIn("장소·맛집 검색 결과", plan.report_markdown)
+        self.assertIn("검색 결과가 없습니다.", plan.report_markdown)
