@@ -1,5 +1,7 @@
 # Korea Travel Planner · Python 응용 API 활용
 
+> GitHub Pages 소개 페이지: Pages 활성화 후 `https://manbok2028.github.io/a1-2/`에서 확인할 수 있습니다.
+
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/LLM-OpenAI_compatible-412991?logo=openai&logoColor=white)
 ![Kakao](https://img.shields.io/badge/Places-Kakao_Local-FFCD00?logo=kakaotalk&logoColor=000000)
