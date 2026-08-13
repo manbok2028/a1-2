@@ -160,7 +160,7 @@ a1-2/
 │  ├─ service.py           # 3단계 파이프라인과 오류 복구
 │  ├─ models.py            # 추천·장소·오류 데이터 모델
 │  ├─ storage.py           # JSON/Markdown 저장과 캐시 로드
-│  └─ demo.py              # 외부 API를 호출하지 않는 데모 클라이언트
+│  └─ offline_clients.py   # 외부 API를 호출하지 않는 오프라인 예시 클라이언트
 ├─ tests/                  # unittest 기반 자동 테스트
 ├─ results/                # 실행 결과 JSON과 Markdown
 ├─ docs/                   # API 설계, 평가 안내, GitHub Pages 소개

@@ -52,7 +52,7 @@ POST /v1/chat/completions
 }
 ```
 
-`TravelPlanner`는 LLM과 장소 검색 클라이언트를 생성자에서 주입받습니다. 기본 실행은 `OpenAIClient`와 `KakaoLocalClient`를 사용하고, `--demo`는 같은 인터페이스의 `DemoLlmClient`와 `DemoPlaceClient`를 교체합니다. OpenAI 호환 서버를 사용하려면 `OPENAI_BASE_URL`과 `OPENAI_MODEL`만 환경변수로 바꾸면 됩니다.
+`TravelPlanner`는 LLM과 장소 검색 클라이언트를 생성자에서 주입받습니다. 기본 실행은 `OpenAIClient`와 `KakaoLocalClient`를 사용하고, `--demo`는 같은 인터페이스의 `OfflineLlmClient`와 `OfflinePlaceClient`를 교체합니다. OpenAI 호환 서버를 사용하려면 `OPENAI_BASE_URL`과 `OPENAI_MODEL`만 환경변수로 바꾸면 됩니다.
 
 ## 사용자 지역 입력 보정
 

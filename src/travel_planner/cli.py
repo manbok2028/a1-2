@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .clients import ApiRequestError, KakaoLocalClient, OpenAIClient
 from .config import ConfigurationError, get_settings, load_dotenv
-from .demo import DemoLlmClient, DemoPlaceClient
+from .offline_clients import OfflineLlmClient, OfflinePlaceClient
 from .input_processing import parse_city_preferences
 from .service import TravelPlanner
 from .storage import load_cached_plan, save_plan
@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> None:
             return
 
     if args.demo:
-        planner = TravelPlanner(DemoLlmClient(), DemoPlaceClient())
+        planner = TravelPlanner(OfflineLlmClient(), OfflinePlaceClient())
         print("[demo] 외부 API를 호출하지 않는 안전한 예시 데이터를 사용합니다.")
     else:
         load_dotenv(PROJECT_ROOT / ".env")

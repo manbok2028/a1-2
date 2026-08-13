@@ -2,7 +2,7 @@ import json
 import unittest
 
 from travel_planner.clients import ApiRequestError
-from travel_planner.demo import DemoLlmClient, DemoPlaceClient
+from travel_planner.offline_clients import OfflineLlmClient, OfflinePlaceClient
 from travel_planner.models import Place
 from travel_planner.service import TravelPlanner
 
@@ -42,7 +42,7 @@ def recommendation_json(city="강릉"):
 
 class TravelPlannerTests(unittest.TestCase):
     def test_example_report_keeps_weather_and_place_details_visible(self):
-        plan = TravelPlanner(DemoLlmClient(), DemoPlaceClient()).create_plan("2026-10-10")
+        plan = TravelPlanner(OfflineLlmClient(), OfflinePlaceClient()).create_plan("2026-10-10")
 
         self.assertIn("여행 시기 날씨 가이드", plan.report_markdown)
         self.assertIn(plan.recommendation.weather, plan.report_markdown)

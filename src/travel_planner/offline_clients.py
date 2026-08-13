@@ -1,4 +1,4 @@
-"""Explicit offline demonstration clients. They never call external APIs."""
+"""Offline example clients that never call external APIs."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 from .models import Place
 
 
-class DemoLlmClient:
+class OfflineLlmClient:
     def complete(self, prompt: str, *, json_mode: bool = False) -> str:
         if not json_mode:
             return _rich_demo_report(prompt)
@@ -24,7 +24,7 @@ class DemoLlmClient:
             )
 
 
-class DemoPlaceClient:
+class OfflinePlaceClient:
     def search_restaurants(self, city: str, limit: int = 5) -> list[Place]:
         return _demo_places(city, limit)
         return [
