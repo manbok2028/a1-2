@@ -6,7 +6,7 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
-from .clients import ApiRequestError, KakaoLocalClient, OpenAIClient
+from .clients import ApiRequestError, GeminiClient, KakaoLocalClient
 from .config import ConfigurationError, get_settings, load_dotenv
 from .offline_clients import OfflineLlmClient, OfflinePlaceClient
 from .input_processing import parse_city_preferences
@@ -91,7 +91,7 @@ def main(argv: list[str] | None = None) -> None:
             print(f"설정 오류: {error}")
             raise SystemExit(2) from error
         planner = TravelPlanner(
-            OpenAIClient(settings.openai_api_key, settings.openai_base_url, settings.openai_model),
+            GeminiClient(settings.gemini_api_key, settings.gemini_model),
             KakaoLocalClient(settings.kakao_rest_api_key),
         )
 

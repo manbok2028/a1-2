@@ -13,10 +13,9 @@ class ConfigurationError(RuntimeError):
 
 @dataclass(frozen=True)
 class Settings:
-    openai_api_key: str
+    gemini_api_key: str
     kakao_rest_api_key: str
-    openai_base_url: str = "https://api.openai.com/v1"
-    openai_model: str = "gpt-4.1-mini"
+    gemini_model: str = "gemini-3.5-flash"
 
 
 def load_dotenv(path: Path) -> None:
@@ -30,25 +29,28 @@ def load_dotenv(path: Path) -> None:
         key, value = line.split("=", maxsplit=1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
+        if key and (key not in os.environ or not os.environ[key].strip()):
             os.environ[key] = value
 
 
 def get_settings() -> Settings:
-    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
     kakao_key = os.getenv("KAKAO_REST_API_KEY", "").strip()
-    missing = [name for name, value in (("OPENAI_API_KEY", openai_key), ("KAKAO_REST_API_KEY", kakao_key)) if not value]
+    missing = [
+        name
+        for name, value in (("GEMINI_API_KEY", gemini_key), ("KAKAO_REST_API_KEY", kakao_key))
+        if not value
+    ]
     if missing:
         joined = ", ".join(missing)
         raise ConfigurationError(
             f"API 키가 설정되지 않았습니다: {joined}\n"
-            "Windows PowerShell 예시: $env:OPENAI_API_KEY=\"YOUR_KEY\"\n"
+            "Windows PowerShell 예시: $env:GEMINI_API_KEY=\"YOUR_KEY\"\n"
             "$env:KAKAO_REST_API_KEY=\"YOUR_KEY\"\n"
-            ".env.example을 복사해 .env 파일에 설정할 수도 있습니다. 실제 키는 절대 Git에 올리지 마세요."
+            ".env.example을 복사해 .env 파일에 설정할 수도 있습니다. 실제 키는 Git에 올리지 마세요."
         )
     return Settings(
-        openai_api_key=openai_key,
+        gemini_api_key=gemini_key,
         kakao_rest_api_key=kakao_key,
-        openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/"),
-        openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip() or "gemini-3.5-flash",
     )

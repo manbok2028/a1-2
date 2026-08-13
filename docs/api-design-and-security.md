@@ -4,9 +4,9 @@
 
 | 단계 | 제공자 | HTTP 방식 | 입력 | 응답 활용 |
 |---|---|---|---|---|
-| 1차 추천 | OpenAI 호환 LLM | POST | 여행 날짜와 JSON 스키마 프롬프트 | `recommended_city`, 날씨, 행사, 이유 |
+| 1차 추천 | Gemini API | POST | 여행 날짜와 JSON 스키마 프롬프트 | `recommended_city`, 날씨, 행사, 이유 |
 | 맛집 검색 | Kakao Local | GET | `recommended_city + 맛집` 쿼리 | 이름, 주소, 분류, URL, 좌표 |
-| 최종 리포트 | OpenAI 호환 LLM | POST | 1차 추천 JSON + 맛집 목록 + errors | Markdown 여행 리포트 |
+| 최종 리포트 | Gemini API | POST | 1차 추천 JSON + 맛집 목록 + errors | Markdown 여행 리포트 |
 
 GET은 이미 있는 정보를 조건으로 조회할 때 URL 쿼리와 함께 사용하고, POST는 LLM처럼 긴 프롬프트와 생성 옵션을 JSON 본문으로 전달할 때 사용합니다.
 
@@ -46,13 +46,12 @@ Authorization: KakaoAK ${KAKAO_REST_API_KEY}
 ```json
 POST /v1/chat/completions
 {
-  "model": "${OPENAI_MODEL}",
-  "messages": [{"role": "user", "content": "날짜와 JSON 스키마를 포함한 추천 프롬프트"}],
-  "response_format": {"type": "json_object"}
+  "contents": [{"role": "user", "parts": [{"text": "날짜와 JSON 스키마를 포함한 추천 프롬프트"}]}],
+  "generationConfig": {"responseMimeType": "application/json"}
 }
 ```
 
-`TravelPlanner`는 LLM과 장소 검색 클라이언트를 생성자에서 주입받습니다. 기본 실행은 `OpenAIClient`와 `KakaoLocalClient`를 사용하고, `--demo`는 같은 인터페이스의 `OfflineLlmClient`와 `OfflinePlaceClient`를 교체합니다. OpenAI 호환 서버를 사용하려면 `OPENAI_BASE_URL`과 `OPENAI_MODEL`만 환경변수로 바꾸면 됩니다.
+`TravelPlanner`는 LLM과 장소 검색 클라이언트를 생성자에서 주입받습니다. 기본 실행은 `GeminiClient`와 `KakaoLocalClient`를 사용하고, `--demo`는 같은 인터페이스의 `OfflineLlmClient`와 `OfflinePlaceClient`를 교체합니다. 기본 모델은 `gemini-3.5-flash`이며, 필요하면 `GEMINI_MODEL` 환경 변수로 바꿀 수 있습니다.
 
 ## 사용자 지역 입력 보정
 
@@ -68,4 +67,4 @@ POST /v1/chat/completions
 {"step": "place_search", "type": "AUTH_ERROR", "message": "HTTP 401"}
 ```
 
-운영 환경에서는 `.env` 대신 배포 플랫폼의 Secret/환경변수 관리 기능에 `OPENAI_API_KEY`, `KAKAO_REST_API_KEY`를 등록합니다. CI에는 실제 키·실제 API 결과를 넣지 않고 `--demo`와 단위 테스트만 실행합니다.
+운영 환경에서는 `.env` 대신 배포 플랫폼의 Secret/환경변수 관리 기능에 `GEMINI_API_KEY`, `KAKAO_REST_API_KEY`를 등록합니다. CI에는 실제 키·실제 API 결과를 넣지 않고 `--demo`와 단위 테스트만 실행합니다.

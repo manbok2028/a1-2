@@ -1,8 +1,9 @@
-"""Small standard-library clients for OpenAI-compatible and Kakao Local APIs."""
+"""Small standard-library clients for Gemini and Kakao Local APIs."""
 
 from __future__ import annotations
 
 import json
+import socket
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -30,36 +31,32 @@ class ApiRequestError(RuntimeError):
         return "NETWORK_ERROR"
 
 
-class OpenAIClient:
-    """Call an OpenAI-compatible chat completions endpoint."""
+class GeminiClient:
+    """Call Gemini generateContent with a server-side API key."""
 
-    def __init__(self, api_key: str, base_url: str, model: str) -> None:
+    def __init__(self, api_key: str, model: str) -> None:
         self.api_key = api_key
-        self.base_url = base_url
         self.model = model
 
     def complete(self, prompt: str, *, json_mode: bool = False) -> str:
         payload: dict[str, Any] = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": "You are a helpful Korean travel planning assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0.4,
+            "systemInstruction": {"parts": [{"text": "You are a helpful Korean travel planning assistant."}]},
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.4},
         }
         if json_mode:
-            payload["response_format"] = {"type": "json_object"}
+            payload["generationConfig"]["responseMimeType"] = "application/json"
         response = _request_json(
-            url=f"{self.base_url}/chat/completions",
+            url=f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent",
             method="POST",
-            headers={"Authorization": f"Bearer {self.api_key}"},
+            headers={"x-goog-api-key": self.api_key},
             payload=payload,
-            provider="openai",
+            provider="gemini",
         )
         try:
-            return str(response["choices"][0]["message"]["content"])
+            return str(response["candidates"][0]["content"]["parts"][0]["text"])
         except (KeyError, IndexError, TypeError) as error:
-            raise ApiRequestError("openai", f"Unexpected OpenAI response: {error}") from error
+            raise ApiRequestError("gemini", f"Unexpected Gemini response: {error}") from error
 
 
 class KakaoLocalClient:
@@ -100,12 +97,13 @@ def _request_json(*, url: str, method: str, headers: dict[str, str], provider: s
         request_headers["Content-Type"] = "application/json"
     request = Request(url, data=data, headers=request_headers, method=method)
     try:
-        with urlopen(request, timeout=20) as response:
+        with urlopen(request, timeout=60) as response:
             body = response.read().decode("utf-8")
     except HTTPError as error:
         raise ApiRequestError(provider, f"HTTP {error.code}", error.code) from error
-    except URLError as error:
-        raise ApiRequestError(provider, f"Network error: {error.reason}") from error
+    except (URLError, TimeoutError, socket.timeout) as error:
+        reason = getattr(error, "reason", str(error))
+        raise ApiRequestError(provider, f"Network error: {reason}") from error
     try:
         decoded = json.loads(body)
     except json.JSONDecodeError as error:

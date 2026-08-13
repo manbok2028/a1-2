@@ -111,7 +111,7 @@ class TravelPlanner:
             report = self.llm_client.complete(prompt)
             if report.strip():
                 return enrich_report_with_source_data(report.strip(), recommendation, restaurants)
-            raise ApiRequestError("openai", "Empty report response")
+            raise ApiRequestError("gemini", "Empty report response")
         except ApiRequestError as error:
             errors.append(ErrorRecord("report_generation", error.category, str(error)))
             return render_fallback_report(travel_date, recommendation, restaurants, errors)

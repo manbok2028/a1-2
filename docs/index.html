@@ -40,7 +40,7 @@
         </nav>
         <div class="hero" id="top">
           <div>
-            <p class="eyebrow">PYTHON · OPENAI COMPATIBLE API · KAKAO LOCAL API</p>
+            <p class="eyebrow">PYTHON · GEMINI API · KAKAO LOCAL API</p>
             <h1>여행 날짜를<br />실행 가능한 여행<br />리포트로</h1>
             <p>LLM이 여행지를 구조화해 추천하고, Kakao Local API가 지역별 맛집·장소를 검색한 뒤, Python이 읽기 쉬운 Markdown과 재사용 가능한 JSON 리포트로 저장하는 국내 여행지 추천 CLI 프로그램입니다.</p>
             <a class="cta" href="#demo">데모 리포트 미리 보기 ↓</a>
@@ -66,7 +66,7 @@
       <section id="flow" aria-labelledby="flow-title">
         <h2 id="flow-title">실제 코드의 3단계 처리 흐름</h2>
         <div class="flow">
-          <div><b>1. 추천 JSON</b><span>OpenAI 호환 LLM에 날짜·선호 도시를 전달하고, 정해진 스키마의 JSON 응답을 받습니다.</span></div><span class="arrow">→</span>
+          <div><b>1. 추천 JSON</b><span>Gemini API에 날짜·선호 도시를 전달하고, 정해진 스키마의 JSON 응답을 받습니다.</span></div><span class="arrow">→</span>
           <div><b>2. Kakao 장소 검색</b><span>추천·입력 도시별로 맛집과 장소를 검색합니다. 검색 실패도 오류 기록으로 남깁니다.</span></div><span class="arrow">→</span>
           <div><b>3. 최종 리포트</b><span>LLM Markdown 리포트와 원본 JSON을 <code>results/</code>에 저장합니다.</span></div>
         </div>

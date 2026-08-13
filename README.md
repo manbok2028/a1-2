@@ -3,7 +3,7 @@
 > 여행 날짜와 선호 지역을 입력하면 **LLM 추천 → Kakao Local 장소 검색 → Markdown/JSON 리포트 저장**을 차례로 수행하는 국내 여행지 추천 CLI 프로그램입니다.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-![LLM](https://img.shields.io/badge/LLM-OpenAI%20compatible-412991?logo=openai&logoColor=white)
+![LLM](https://img.shields.io/badge/LLM-Gemini-4285F4?logo=google&logoColor=white)
 ![Kakao](https://img.shields.io/badge/Places-Kakao%20Local-FFCD00?logo=kakaotalk&logoColor=000000)
 ![Interface](https://img.shields.io/badge/Interface-CLI-1769AA)
 
@@ -19,11 +19,11 @@
 ```text
 여행 날짜 / 선호 지역 입력
         ↓
-[1] OpenAI 호환 LLM: 추천 지역·날씨/계절 가이드·행사·추천 이유를 JSON으로 생성
+[1] Gemini API: 추천 지역·날씨/계절 가이드·행사·추천 이유를 JSON으로 생성
         ↓
 [2] Kakao Local API: 각 추천 지역의 맛집·장소를 검색
         ↓
-[3] OpenAI 호환 LLM: 수집 결과를 읽기 쉬운 Markdown 여행 리포트로 작성
+[3] Gemini API: 수집 결과를 읽기 쉬운 Markdown 여행 리포트로 작성
         ↓
 results/<날짜>_raw.json + results/<날짜>_travel_plan.md 저장
 ```
@@ -80,7 +80,7 @@ Copy-Item .env.example .env
 `.env` 파일에는 본인이 발급한 실제 키만 넣습니다. 따옴표, 설명 문구, 공백을 넣지 않습니다.
 
 ```text
-OPENAI_API_KEY=실제_OpenAI_API_키
+GEMINI_API_KEY=실제_Gemini_API_키
 KAKAO_REST_API_KEY=실제_카카오_REST_API_키
 ```
 
@@ -93,7 +93,7 @@ python -m travel_planner --date "2026-10-10" --refresh
 PowerShell에서 해당 창에만 일시적으로 키를 설정할 수도 있습니다.
 
 ```powershell
-$env:OPENAI_API_KEY="실제_OpenAI_API_키"
+$env:GEMINI_API_KEY="실제_Gemini_API_키"
 $env:KAKAO_REST_API_KEY="실제_카카오_REST_API_키"
 python -m travel_planner --date "2026-10-10" --refresh
 ```
@@ -163,7 +163,7 @@ a1-2/
 ├─ src/travel_planner/
 │  ├─ cli.py               # argparse 입력, 진행 메시지, 캐시 확인
 │  ├─ config.py            # .env/환경 변수 로드와 키 검증
-│  ├─ clients.py           # OpenAI 호환 API POST, Kakao Local API GET
+│  ├─ clients.py           # Gemini API POST, Kakao Local API GET
 │  ├─ input_processing.py  # 지역 입력 추출·별칭 보정
 │  ├─ service.py           # 3단계 파이프라인과 오류 복구
 │  ├─ models.py            # 추천·장소·오류 데이터 모델

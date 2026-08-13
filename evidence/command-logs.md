@@ -2,7 +2,7 @@
 
 ## API 키 없는 데모 실행
 
-아래 명령은 실제 OpenAI·Kakao API를 호출하지 않고 결과 파일 구조와 전체 흐름을 검증합니다.
+아래 명령은 실제 Gemini·Kakao API를 호출하지 않고 결과 파일 구조와 전체 흐름을 검증합니다.
 
 ```text
 PS> python -m travel_planner --date "2026-10-10" --demo --refresh
