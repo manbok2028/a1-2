@@ -9,6 +9,8 @@ from .models import Place
 
 class DemoLlmClient:
     def complete(self, prompt: str, *, json_mode: bool = False) -> str:
+        if not json_mode:
+            return _rich_demo_report(prompt)
         if json_mode:
             return json.dumps(
                 {
@@ -54,3 +56,74 @@ def _demo_places(city: str, limit: int) -> list[Place]:
             Place(f"{city} 지역 카페 (데모)", f"{city} 예시 주소", "음식점 > 카페"),
         ],
     )[:limit]
+
+
+def _rich_demo_report(prompt: str) -> str:
+    """Create a complete offline report from the same structured payload as production.
+
+    Demo mode is intentionally transparent: place names and addresses are
+    labelled as examples, while the report layout matches an API-run report.
+    """
+
+    try:
+        payload = json.loads(prompt[prompt.rfind("\n{") + 1 :])
+    except (TypeError, ValueError, json.JSONDecodeError):
+        payload = {}
+
+    recommendation = payload.get("recommendation", {}) if isinstance(payload, dict) else {}
+    restaurants = payload.get("restaurants_by_city", {}) if isinstance(payload, dict) else {}
+    cities = recommendation.get("recommended_cities", []) if isinstance(recommendation, dict) else []
+    if not cities and isinstance(recommendation, dict):
+        cities = [recommendation.get("recommended_city", "강릉")]
+    city_text = ", ".join(str(city) for city in cities if city) or "강릉, 속초"
+    weather = str(recommendation.get("weather", "가을 여행을 위한 날씨 가이드 정보입니다."))
+    reason = str(recommendation.get("reason", "해안 산책과 지역 문화 공간을 함께 즐길 수 있습니다."))
+    events = recommendation.get("events", []) if isinstance(recommendation, dict) else []
+
+    lines = [
+        "# 데모 국내 여행 추천 리포트",
+        "",
+        "## 추천 지역",
+        city_text,
+        "",
+        "## 추천 이유",
+        reason,
+        "",
+        "## 여행 시기 날씨 가이드",
+        weather,
+        "",
+        "> 이 날씨 정보는 데모용 여행 계획 가이드입니다. 실제 출발 전에는 기상청 등 공식 예보를 확인하세요.",
+        "",
+        "## 행사/계절 참고",
+    ]
+    lines.extend([f"- {event}" for event in events] or ["- 지역 행사 정보는 출발 전 공식 채널에서 확인하세요."])
+    lines.extend(["", "## 맛집 및 장소 검색 결과"])
+
+    if isinstance(restaurants, dict):
+        for city, places in restaurants.items():
+            lines.append(f"### {city}")
+            if not isinstance(places, list) or not places:
+                lines.append("- 검색 결과가 없습니다.")
+                continue
+            for place in places:
+                if not isinstance(place, dict):
+                    continue
+                name = str(place.get("name", "이름 없음"))
+                category = str(place.get("category", "분류 정보 없음"))
+                address = str(place.get("address", "주소 정보 없음"))
+                lines.append(f"- **{name}** — {category} · {address}")
+
+    lines.extend(
+        [
+            "",
+            "## 1일 일정 제안",
+            "- 오전: 추천 지역의 해안·시장·산책 공간 중 한 곳을 선택합니다.",
+            "- 오후: 날씨와 이동 시간을 고려해 문화 공간 또는 카페를 방문합니다.",
+            "- 저녁: 위 검색 결과 중 운영 시간과 위치를 확인한 뒤 식당을 선택합니다.",
+            "",
+            "## 데모 안내",
+            "- 이 리포트는 외부 API를 호출하지 않는 학습용 예시입니다.",
+            "- `--demo`를 빼고 실제 키를 설정하면 Kakao Local API 검색 결과로 교체됩니다.",
+        ]
+    )
+    return "\n".join(lines)

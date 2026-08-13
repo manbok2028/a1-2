@@ -46,8 +46,10 @@ class TravelPlannerTests(unittest.TestCase):
 
         self.assertIn("여행 시기 날씨 가이드", plan.report_markdown)
         self.assertIn(plan.recommendation.weather, plan.report_markdown)
-        self.assertIn("장소·맛집 검색 결과", plan.report_markdown)
+        self.assertIn("맛집 및 장소 검색 결과", plan.report_markdown)
         self.assertIn("강릉 바다식당 (데모)", plan.report_markdown)
+        self.assertNotIn("데모 맛집 데이터", plan.report_markdown)
+        self.assertNotIn("실제 예보가 아닌 데모 정보", plan.report_markdown)
 
     def test_creates_plan_with_restaurants_and_markdown_report(self):
         llm = FakeLlm([recommendation_json(), "# 여행 리포트\n\n## 추천 지역\n강릉"])
